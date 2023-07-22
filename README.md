@@ -4,12 +4,12 @@ A self-hosted program that replaces the contents of your clipboard with a sharea
 
 - Basically free
 - Uploads files to your very own [google cloud storage](https://cloud.google.com/storage) bucket
-- Generates permalinks (unless you opt for an [expiration time](https://cloud.google.com/storage/docs/lifecycle))
+- Generates permalinks (unless you set an [expiration time](https://cloud.google.com/storage/docs/lifecycle))
 - Converts PNGs to JPG to reduce storage size
-- Videos play right in the web browser
+- Videos play right in the browser
 - Supports all file types
 - Integrates with Mac Finder
-- Less than 150 lines of python
+- Less than 150 lines of Python
 
 | Image | Video |
 |---|---|
