@@ -13,6 +13,11 @@ from dotenv import dotenv_values
 from google.cloud import storage
 
 
+PROJECT_ID: str
+BUCKET_ID: str
+JPEG_QUALITY: int
+
+
 def extension_to_type(extension: str) -> str:
     assert isinstance(extension, str), f"Expected extension to be str, received: {extension}"
     content_type = mimetypes.types_map.get(extension)
@@ -23,7 +28,7 @@ def extension_to_type(extension: str) -> str:
 def image_to_bytes(im: PILImage) -> bytes:
     im_prep = im.convert('RGB')
     with io.BytesIO() as buffer:
-        im_prep.save(buffer, format="JPEG", jpeg_quality=jpeg_quality)
+        im_prep.save(buffer, format="JPEG", jpeg_quality=JPEG_QUALITY)
         return buffer.getvalue()
 
 
@@ -57,8 +62,8 @@ def read_from_path(path: Path) -> tuple[bytes, str]:
 
 
 def upload_blob(content, blob_name):
-    client = storage.Client(project=project_id)
-    bucket = client.bucket(bucket_id)
+    client = storage.Client(project=PROJECT_ID)
+    bucket = client.bucket(BUCKET_ID)
     blob = bucket.blob(blob_name)
 
     kwds = {}
@@ -71,32 +76,32 @@ def upload_blob(content, blob_name):
     return blob.public_url
 
 
-if __name__ == "__main__":
-    env_file = Path(__file__).parent.joinpath(".env").resolve()
-    if not env_file.exists():
-        print(f"Missing file {env_file}")
-        sys.exit()
+def read_config(env_file: Path):
+    global PROJECT_ID, BUCKET_ID, JPEG_QUALITY
 
+    assert env_file.exists(), f"Missing file {env_file}"
     config = dotenv_values(env_file)
 
-    project_id = config.get("PROJECT_ID")
-    if not project_id:
-        print(f"Missing PROJECT_ID in {env_file}")
-        sys.exit()
+    PROJECT_ID = config.get("PROJECT_ID")
+    assert PROJECT_ID, f"Missing PROJECT_ID in {env_file}"
 
-    bucket_id = config.get("BUCKET_ID")
-    if not bucket_id:
-        print(f"Missing BUCKET_ID in {env_file}")
-        sys.exit()
+    BUCKET_ID = config.get("BUCKET_ID")
+    assert BUCKET_ID, f"Missing BUCKET_ID in {env_file}"
 
-    jpeg_quality = config.get("JPEG_QUALITY")
-    if not jpeg_quality:
-        print(f"Missing JPEG_QUALITY in {env_file}")
-        sys.exit()
+    JPEG_QUALITY = config.get("JPEG_QUALITY")
+    assert JPEG_QUALITY, f"Missing JPEG_QUALITY in {env_file}"
     try:
-        jpeg_quality = int(jpeg_quality)
+        JPEG_QUALITY = int(JPEG_QUALITY)
     except ValueError:
-        print(f"Expected JPEG_QUALITY to be an integer, received {jpeg_quality}")
+        raise TypeError(f"Expected JPEG_QUALITY to be an integer, received {JPEG_QUALITY}")
+
+
+if __name__ == "__main__":
+    env_file = Path(__file__).parent.joinpath(".env").resolve()
+    try:
+        read_config(env_file)
+    except Exception as e:
+        print(f"Failed to read config: {e}")
         sys.exit()
 
     image: PILImage | None = None
