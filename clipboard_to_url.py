@@ -60,8 +60,14 @@ def upload_blob(content, blob_name):
     client = storage.Client(project=project_id)
     bucket = client.bucket(bucket_id)
     blob = bucket.blob(blob_name)
-    content_type = extension_to_type(Path(blob_name).suffix)
-    blob.upload_from_string(content, content_type=content_type)
+
+    kwds = {}
+    try:
+        kwds["content_type"] = extension_to_type(Path(blob_name).suffix)
+    except Exception:
+        pass
+
+    blob.upload_from_string(content, **kwds)
     return blob.public_url
 
 
