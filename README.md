@@ -1,6 +1,6 @@
 # clipboard-to-url
 
-A CLI tool that uploads images, videos, or files from your clipboard to Google Cloud Storage and provides a shareable URL
+A CLI tool that uploads images, videos, or files from your clipboard to Google Cloud Storage and provides a shareable URL.
 
 ### Share an image from your clipboard
 
@@ -12,6 +12,11 @@ Video plays right in the browser
 
 https://github.com/kym6464/clipboard-to-url/assets/36041631/db849cbf-f158-408c-b3f1-a72562f6942d
 
+### Share a local image file
+
+Images are converted to JPG with configurable quality
+
+https://github.com/kym6464/clipboard-to-url/assets/36041631/421d6b98-2f32-486f-8b2c-f52efb31fc80
 
 ### Share an arbitrary local file
 
