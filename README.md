@@ -8,6 +8,7 @@ A self-hosted program that replaces the contents of your clipboard with a sharea
 - Videos play right in the web browser
 - Supports all file types
 - Integrates with Mac Finder
+- Less than 150 lines of python
 
 | Image | Video |
 |---|---|
