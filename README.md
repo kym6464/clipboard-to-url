@@ -3,8 +3,10 @@
 A self-hosted program that replaces the contents of your clipboard with a shareable URL. Features:
 
 - Uploads files to your very own [google cloud storage](https://cloud.google.com/storage) bucket
+- Generates permalinks (unless you opt for an [expiration time](https://cloud.google.com/storage/docs/lifecycle))
 - Converts PNGs to JPG to reduce storage size
 - Videos play right in the web browser
+- Supports all file types
 - Integrates with Mac Finder
 
 | Image | Video |
