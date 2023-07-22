@@ -31,9 +31,11 @@ A self-hosted program that replaces the contents of your clipboard with a sharea
 
 (3) Copy `.env.example` to `.env` and fill out the values
 
-(4) Create a python virtual environment `python -m venv env`
+(4) Authenticate with google cloud using [this](https://cloud.google.com/docs/authentication/client-libraries) guide
 
-(5) Install dependencies `pip install wheel && pip install -r requirements.txt`
+(5) Create a python virtual environment `python -m venv env`
+
+(6) Install dependencies `pip install wheel && pip install -r requirements.txt`
 
 ## Mac Finder Integration
 
