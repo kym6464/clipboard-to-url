@@ -3,6 +3,7 @@ import pyperclip
 import hashlib
 import io
 import mimetypes
+import os
 
 from PIL import Image, UnidentifiedImageError
 from PIL.Image import Image as PILImage
@@ -40,6 +41,7 @@ def prepare_image(image: PILImage) -> tuple[bytes, str]:
 
 
 def read_from_path(path: Path) -> tuple[bytes, str]:
+    assert os.access(str(path), os.R_OK), f"Permission error"
     assert path.exists() and path.is_file()
 
     try:
