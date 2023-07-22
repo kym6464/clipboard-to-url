@@ -32,7 +32,7 @@ https://github.com/kym6464/clipboard-to-url/assets/36041631/29f74632-5b50-489f-8
 
 (2) Make the bucket public by granting the `Storage Object Viewer` role to the `allUsers` principal (see [this](https://cloud.google.com/storage/docs/access-control/making-data-public) guide for more details). This allows anyone on the internet to _view_ files that are in this bucket, but only you can upload files to this bucket. When all is said and done, it should look like this:
 
-![bucket_permissions](./assets//bucket_permissions.png)
+![bucket_permissions](https://github.com/kym6464/clipboard-to-url/assets/36041631/a50e0832-ff02-4ffb-84a2-69a711fa507f)
 
 (3) Copy `.env.example` to `.env` and fill out the values
 
