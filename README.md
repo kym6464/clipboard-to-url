@@ -31,7 +31,7 @@ A self-hosted program that replaces the contents of your clipboard with a sharea
 
 (3) Copy `.env.example` to `.env` and fill out the values
 
-(4) Authenticate with google cloud using [this](https://cloud.google.com/docs/authentication/client-libraries) guide
+(4) Authenticate with google cloud https://cloud.google.com/docs/authentication/client-libraries
 
 (5) Create a python virtual environment `python -m venv env`
 
@@ -45,4 +45,4 @@ To integrate with [Quick Actions](https://support.apple.com/guide/mac-help/perfo
 pbcopy && /Users/kym/repos/clipboard-to-url/env/bin/python "/Users/kym/repos/clipboard-to-url/clipboard_to_url.py"
 ```
 
-For more details/troubleshooting, follow [this](https://cloudinary.com/blog/upload-image-files-to-cloudinary-using-a-finder-custom-quick-action-on-a-mac) guide
+For more details/troubleshooting, see https://cloudinary.com/blog/upload-image-files-to-cloudinary-using-a-finder-custom-quick-action-on-a-mac
