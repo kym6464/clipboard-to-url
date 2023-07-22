@@ -107,7 +107,7 @@ if __name__ == "__main__":
     
     if content is None and (value := pyperclip.paste()):        
         try:
-            content, blob_name = read_from_path(Path(value))
+            content, blob_name = read_from_path(Path(value.strip()))
         except Exception:
             pass
     
