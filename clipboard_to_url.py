@@ -114,11 +114,9 @@ if __name__ == "__main__":
 
     content: bytes | None = None
     blob_name: str | None = None
-
     if image is not None:
         content, blob_name = prepare_image(image)
-    
-    if content is None and (value := pyperclip.paste()):        
+    elif value := pyperclip.paste():        
         try:
             content, blob_name = read_from_path(Path(value.strip()))
         except Exception:
