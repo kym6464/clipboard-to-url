@@ -8,6 +8,7 @@ import os
 from PIL import Image, UnidentifiedImageError
 from PIL.Image import Image as PILImage
 from PIL import ImageGrab
+from pillow_heif import register_heif_opener
 from pathlib import Path
 from dotenv import dotenv_values
 from google.cloud import storage
@@ -16,6 +17,8 @@ from google.cloud import storage
 PROJECT_ID: str
 BUCKET_ID: str
 JPEG_QUALITY: int
+
+register_heif_opener()
 
 
 def extension_to_type(extension: str) -> str:
@@ -50,7 +53,7 @@ def read_from_path(path: Path) -> tuple[bytes, str]:
     assert path.exists() and path.is_file()
 
     try:
-        with Image.open(path, formats=["JPEG", "PNG"]) as image:
+        with Image.open(path) as image:
             return prepare_image(image)
     except UnidentifiedImageError:
         pass

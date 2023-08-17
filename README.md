@@ -5,7 +5,7 @@ A self-hosted program that replaces the contents of your clipboard with a sharea
 - Basically free
 - Uploads files to your very own [google cloud storage](https://cloud.google.com/storage) bucket
 - Generates permalinks (unless you set an [expiration time](https://cloud.google.com/storage/docs/lifecycle))
-- Converts PNGs to JPG to reduce storage size
+- Converts PNG and HEIF to JPG to reduce storage size
 - Videos play right in the browser
 - Supports all file types
 - Integrates with Mac Finder
