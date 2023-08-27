@@ -7,9 +7,10 @@ A self-hosted program that replaces the contents of your clipboard with a sharea
 - Generates permalinks (unless you set an [expiration time](https://cloud.google.com/storage/docs/lifecycle))
 - Converts PNG and HEIF to JPG to reduce storage size
 - Videos play right in the browser
+- JSON is prettified and compacted via [compact-json](https://github.com/masaccio/compact-json)
 - Supports all file types
 - Integrates with Mac Finder
-- Less than 150 lines of Python
+- Less than 200 lines of Python
 
 | Image | Video |
 |---|---|

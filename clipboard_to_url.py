@@ -4,6 +4,7 @@ import hashlib
 import io
 import mimetypes
 import os
+import json
 
 from PIL import Image, UnidentifiedImageError
 from PIL.Image import Image as PILImage
@@ -12,6 +13,7 @@ from pillow_heif import register_heif_opener
 from pathlib import Path
 from dotenv import dotenv_values
 from google.cloud import storage
+from compact_json import Formatter, EolStyle
 
 
 PROJECT_ID: str
@@ -48,7 +50,23 @@ def prepare_image(image: PILImage) -> tuple[bytes, str]:
     return content, blob_name
 
 
-def read_from_path(path: Path) -> tuple[bytes, str]:
+def read_json(value: str) -> tuple[bytes, str]:
+    json_data = json.loads(value)
+    assert json_data, "Expected non-empty JSON object or array"
+
+    formatter = Formatter()
+    formatter.indent_spaces = 2
+    formatter.max_inline_complexity = 10
+    formatter.json_eol_style = EolStyle.LF
+    json_string = formatter.serialize(json_data)
+    
+    content = json_string.encode()
+    blob_name = f"{hash_bytes(content)}.json"
+
+    return content, blob_name
+
+
+def read_file(path: Path) -> tuple[bytes, str]:
     assert os.access(str(path), os.R_OK), f"Permission error"
     assert path.exists() and path.is_file()
 
@@ -56,6 +74,11 @@ def read_from_path(path: Path) -> tuple[bytes, str]:
         with Image.open(path) as image:
             return prepare_image(image)
     except UnidentifiedImageError:
+        pass
+
+    try:
+        return read_json(path.read_text())
+    except Exception:
         pass
 
     content = path.read_bytes()
@@ -77,6 +100,29 @@ def upload_blob(content, blob_name):
 
     blob.upload_from_string(content, **kwds)
     return blob.public_url
+
+
+def get_blob_to_upload() -> tuple[bytes, str] | None:
+    value = pyperclip.paste()
+    if not value:
+        return
+
+    try:
+        return read_file(Path(value.strip()))
+    except Exception:
+        pass
+
+    try:
+        return read_json(value)
+    except Exception:
+        pass
+
+    try:
+        image = ImageGrab.grabclipboard()
+        if isinstance(image, PILImage):
+            return prepare_image(image)
+    except Exception:
+        pass
 
 
 def read_config(env_file: Path):
@@ -105,29 +151,13 @@ if __name__ == "__main__":
         read_config(env_file)
     except Exception as e:
         print(f"Failed to read config: {e}")
-        sys.exit()
+        sys.exit(1)
 
-    image: PILImage | None = None
-    try:
-        value = ImageGrab.grabclipboard()
-        if isinstance(value, PILImage):
-            image = value
-    except Exception as e:
-        pass
-
-    content: bytes | None = None
-    blob_name: str | None = None
-    if image is not None:
-        content, blob_name = prepare_image(image)
-    elif value := pyperclip.paste():        
-        try:
-            content, blob_name = read_from_path(Path(value.strip()))
-        except Exception:
-            pass
-    
-    if content is None:
+    to_upload = get_blob_to_upload()
+    if to_upload is None:
         print("Nothing to upload")
         sys.exit()
 
+    content, blob_name = to_upload
     url = upload_blob(content, blob_name)
     pyperclip.copy(url)
