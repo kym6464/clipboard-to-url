@@ -103,6 +103,14 @@ def upload_blob(content, blob_name):
 
 
 def get_blob_to_upload() -> tuple[bytes, str] | None:
+    try:
+        image = ImageGrab.grabclipboard()
+        if isinstance(image, PILImage):
+            return prepare_image(image)
+    except Exception:
+        pass
+
+    # This will return None if clipboard does not contain text
     value = pyperclip.paste()
     if not value:
         return
@@ -114,13 +122,6 @@ def get_blob_to_upload() -> tuple[bytes, str] | None:
 
     try:
         return read_json(value)
-    except Exception:
-        pass
-
-    try:
-        image = ImageGrab.grabclipboard()
-        if isinstance(image, PILImage):
-            return prepare_image(image)
     except Exception:
         pass
 
