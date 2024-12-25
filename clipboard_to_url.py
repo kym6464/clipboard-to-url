@@ -91,6 +91,8 @@ def upload_blob(content, blob_name):
     client = storage.Client(project=PROJECT_ID)
     bucket = client.bucket(BUCKET_ID)
     blob = bucket.blob(blob_name)
+    if blob.exists():
+        return blob.public_url
 
     kwds = {}
     try:
