@@ -45,7 +45,7 @@ A self-hosted program that replaces the contents of your clipboard with a sharea
 To integrate with [Quick Actions](https://support.apple.com/guide/mac-help/perform-quick-actions-in-the-finder-on-mac-mchl97ff9142/mac) like in the above demo, use [Automator](https://support.apple.com/guide/automator/welcome/mac) to invoke the script with files — [this](https://github.com/kym6464/clipboard-to-url/assets/36041631/eaaab735-52d5-485c-978e-9ce66ed70f74) is what the final product could look like
 
 ```
-pbcopy && uv run "/Users/kym/repos/clipboard-to-url/main.py"
+pbcopy && uv run -s "/Users/kym/repos/clipboard-to-url/main.py"
 ```
 
 For more details/troubleshooting, see https://cloudinary.com/blog/upload-image-files-to-cloudinary-using-a-finder-custom-quick-action-on-a-mac

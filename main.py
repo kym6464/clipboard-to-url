@@ -1,3 +1,14 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "compact-json==1.5.2",
+#     "google-cloud-storage==2.10.0",
+#     "pillow==10.0.0",
+#     "pillow-heif==0.13.0",
+#     "pyperclip==1.8.2",
+#     "python-dotenv==1.0.0",
+# ]
+# ///
 import sys
 import pyperclip
 import hashlib
