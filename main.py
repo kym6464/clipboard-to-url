@@ -187,8 +187,7 @@ def read_config(env_file: Path):
     BUCKET_ID = config.get("BUCKET_ID")
     assert BUCKET_ID, f"Missing BUCKET_ID in {env_file}"
 
-    JPEG_QUALITY = config.get("JPEG_QUALITY")
-    assert JPEG_QUALITY, f"Missing JPEG_QUALITY in {env_file}"
+    JPEG_QUALITY = config.get("JPEG_QUALITY", "90")
     try:
         JPEG_QUALITY = int(JPEG_QUALITY)
     except ValueError:
