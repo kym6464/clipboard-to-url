@@ -12,12 +12,12 @@ A self-hosted program that replaces the contents of your clipboard with a sharea
 - Integrates with Mac Finder
 - Less than 200 lines of Python
 
-| Image | Video |
-|---|---|
+| Image                                                                                                             | Video                                                                                                             |
+| ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | ![finder image](https://github.com/kym6464/clipboard-to-url/assets/36041631/fc8df94c-9d01-4d9c-9f85-ac2c6ec9aa84) | ![finder video](https://github.com/kym6464/clipboard-to-url/assets/36041631/a0506636-6c20-4014-8e89-a77f04c6a523) |
 
-| Code | Zip |
-|---|---|
+| Code                                                                                                            | Zip                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | ![finder yml](https://github.com/kym6464/clipboard-to-url/assets/36041631/8f05bcb2-7cdf-4b67-ad88-d2eb51e13f90) | ![finder zip](https://github.com/kym6464/clipboard-to-url/assets/36041631/58399047-8aa2-4d03-b9ef-360f98f2de35) |
 
 ## Usage
@@ -38,16 +38,14 @@ A self-hosted program that replaces the contents of your clipboard with a sharea
 
 (4) Authenticate with google cloud https://cloud.google.com/docs/authentication/client-libraries
 
-(5) Create a python virtual environment `python -m venv env`
-
-(6) Install dependencies `pip install wheel && pip install -r requirements.txt`
+(5) Install [uv](https://docs.astral.sh/uv/) if you don't already have it
 
 ## Mac Finder Integration
 
 To integrate with [Quick Actions](https://support.apple.com/guide/mac-help/perform-quick-actions-in-the-finder-on-mac-mchl97ff9142/mac) like in the above demo, use [Automator](https://support.apple.com/guide/automator/welcome/mac) to invoke the script with files — [this](https://github.com/kym6464/clipboard-to-url/assets/36041631/eaaab735-52d5-485c-978e-9ce66ed70f74) is what the final product could look like
 
 ```
-pbcopy && /Users/kym/repos/clipboard-to-url/env/bin/python "/Users/kym/repos/clipboard-to-url/clipboard_to_url.py"
+pbcopy && uv run "/Users/kym/repos/clipboard-to-url/clipboard_to_url.py"
 ```
 
 For more details/troubleshooting, see https://cloudinary.com/blog/upload-image-files-to-cloudinary-using-a-finder-custom-quick-action-on-a-mac
