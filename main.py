@@ -18,7 +18,7 @@ from compact_json import Formatter, EolStyle
 
 PROJECT_ID: str
 BUCKET_ID: str
-OBJECT_PREFIX: str | None = None
+OBJECT_PREFIX: str | None
 JPEG_QUALITY: int
 
 register_heif_opener()
@@ -133,7 +133,7 @@ def get_blob_to_upload() -> tuple[bytes, str] | None:
 
 
 def read_config(env_file: Path):
-    global PROJECT_ID, BUCKET_ID, JPEG_QUALITY
+    global PROJECT_ID, BUCKET_ID, OBJECT_PREFIX, JPEG_QUALITY
 
     assert env_file.exists(), f"Missing file {env_file}"
     config = dotenv_values(env_file)
