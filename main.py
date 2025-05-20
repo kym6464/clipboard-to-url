@@ -5,6 +5,7 @@ import io
 import mimetypes
 import os
 import json
+import argparse
 
 from PIL import Image, UnidentifiedImageError
 from PIL.Image import Image as PILImage
@@ -60,7 +61,7 @@ def read_json(value: str) -> tuple[bytes, str]:
     formatter.max_inline_complexity = 10
     formatter.json_eol_style = EolStyle.LF
     json_string = formatter.serialize(json_data)
-    
+
     content = json_string.encode()
     blob_name = f"{hash_bytes(content)}.json"
 
@@ -95,8 +96,12 @@ def upload_blob(content, blob_name):
     if OBJECT_PREFIX:
         blob_name = OBJECT_PREFIX + blob_name
     blob = bucket.blob(blob_name)
+
     if blob.exists():
-        return blob.public_url
+        return {
+            "public_url": blob.public_url,
+            "gcs_uri": f"gs://{BUCKET_ID}/{blob_name}"
+        }
 
     kwds = {}
     try:
@@ -105,7 +110,10 @@ def upload_blob(content, blob_name):
         pass
 
     blob.upload_from_string(content, **kwds)
-    return blob.public_url
+    return {
+        "public_url": blob.public_url,
+        "gcs_uri": f"gs://{BUCKET_ID}/{blob_name}"
+    }
 
 
 def get_blob_to_upload() -> tuple[bytes, str] | None:
@@ -116,7 +124,6 @@ def get_blob_to_upload() -> tuple[bytes, str] | None:
     except Exception:
         pass
 
-    # This will return None if clipboard does not contain text
     value = pyperclip.paste()
     if not value:
         return
@@ -154,6 +161,11 @@ def read_config(env_file: Path):
     OBJECT_PREFIX = config.get("OBJECT_PREFIX")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Upload content from clipboard or file to Google Cloud Storage.')
+    parser.add_argument('-o', '--output', choices=['clipboard', 'stdout'], default='clipboard',
+                        help='Specify where to output the resulting URL (default: clipboard)')
+    args = parser.parse_args()
+
     env_file = Path(__file__).parent.joinpath(".env").resolve()
     try:
         read_config(env_file)
@@ -167,5 +179,9 @@ if __name__ == "__main__":
         sys.exit()
 
     content, blob_name = to_upload
-    url = upload_blob(content, blob_name)
-    pyperclip.copy(url)
+    result = upload_blob(content, blob_name)
+
+    if args.output == 'clipboard':
+        pyperclip.copy(result["public_url"])
+    else:
+        print(json.dumps(result))
