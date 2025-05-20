@@ -18,6 +18,7 @@ from compact_json import Formatter, EolStyle
 
 PROJECT_ID: str
 BUCKET_ID: str
+OBJECT_PREFIX: str | None
 JPEG_QUALITY: int
 
 register_heif_opener()
@@ -90,6 +91,9 @@ def read_file(path: Path) -> tuple[bytes, str]:
 def upload_blob(content, blob_name):
     client = storage.Client(project=PROJECT_ID)
     bucket = client.bucket(BUCKET_ID)
+
+    if OBJECT_PREFIX:
+        blob_name = OBJECT_PREFIX + blob_name
     blob = bucket.blob(blob_name)
     if blob.exists():
         return blob.public_url
@@ -147,6 +151,7 @@ def read_config(env_file: Path):
     except ValueError:
         raise TypeError(f"Expected JPEG_QUALITY to be an integer, received {JPEG_QUALITY}")
 
+    OBJECT_PREFIX = config.get("OBJECT_PREFIX")
 
 if __name__ == "__main__":
     env_file = Path(__file__).parent.joinpath(".env").resolve()
