@@ -18,7 +18,7 @@ from compact_json import Formatter, EolStyle
 
 PROJECT_ID: str
 BUCKET_ID: str
-OBJECT_PREFIX: str | None
+OBJECT_PREFIX: str | None = None
 JPEG_QUALITY: int
 
 register_heif_opener()
