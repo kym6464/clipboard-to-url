@@ -68,15 +68,21 @@ def read_json(value: str) -> tuple[bytes, str]:
 
     return content, blob_name
 
+def read_csv(value: str) -> tuple[bytes, str] | None:
+    lines = value.strip().splitlines()
+    assert len(lines) > 0, "Expected non-empty CSV string"
+    assert ',' in lines[0] or ';' in lines[0] or '\t' in lines[0], "Expected comma, semicolon, or tab delimiter in header"
+    content = value.encode()
+    blob_name = f"{hash_bytes(content)}.csv"
+    return content, blob_name
+
 def read_sql(value: str) -> tuple[bytes, str] | None:
     sql_keywords = ["SELECT", "FROM", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER", "JOIN", "WHERE", "GROUP BY", "ORDER BY"]
-    # Use regex to find keywords with word boundaries to avoid matching parts of words
     pattern = r'\b(' + '|'.join(sql_keywords) + r')\b'
     assert re.search(pattern, value, re.IGNORECASE), "Expected SQL query"
     content = value.encode()
     blob_name = f"{hash_bytes(content)}.sql"
     return content, blob_name
-
 
 def read_file(path: Path) -> tuple[bytes, str]:
     assert os.access(str(path), os.R_OK), f"Permission error"
@@ -90,6 +96,11 @@ def read_file(path: Path) -> tuple[bytes, str]:
 
     try:
         return read_json(path.read_text())
+    except Exception:
+        pass
+
+    try:
+        return read_csv(path.read_text())
     except Exception:
         pass
 
@@ -151,6 +162,11 @@ def get_blob_to_upload() -> tuple[bytes, str] | None:
 
     try:
         return read_json(value)
+    except Exception:
+        pass
+
+    try:
+        return read_csv(value)
     except Exception:
         pass
 
