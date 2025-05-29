@@ -116,6 +116,15 @@ def read_sql(value: str) -> tuple[bytes, str] | None:
     blob_name = f"{hash_bytes(content)}.sql"
     return content, blob_name
 
+def read_text(value: str) -> tuple[bytes, str]:
+    trimmed_value = value.strip()
+    assert trimmed_value, "Expected non-empty string after trimming whitespace"
+    assert len(trimmed_value) >= 10, "Expected string to be at least 10 characters long"
+    
+    content = value.encode()
+    blob_name = f"{hash_bytes(content)}.txt"
+    return content, blob_name
+
 def read_file(path: Path) -> tuple[bytes, str]:
     assert os.access(str(path), os.R_OK), f"Permission error"
     assert path.exists() and path.is_file()
@@ -141,6 +150,10 @@ def read_file(path: Path) -> tuple[bytes, str]:
     except Exception:
         pass
 
+    try:
+        return read_text(path.read_text())
+    except Exception:
+        pass
 
     content = path.read_bytes()
     content_hash = hash_bytes(content)
@@ -206,6 +219,8 @@ def get_blob_to_upload() -> tuple[bytes, str] | None:
         return read_sql(value)
     except Exception:
         pass
+
+    return read_text(value)
 
 def read_config(env_file: Path):
     global PROJECT_ID, BUCKET_ID, OBJECT_PREFIX, JPEG_QUALITY
