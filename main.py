@@ -108,13 +108,6 @@ def read_csv(value: str) -> tuple[bytes, str] | None:
     blob_name = f"{hash_bytes(content)}.csv"
     return content, blob_name
 
-def read_sql(value: str) -> tuple[bytes, str] | None:
-    sql_keywords = ["SELECT", "FROM", "INSERT", "UPDATE", "DELETE", "CREATE", "DROP", "ALTER", "JOIN", "WHERE", "GROUP BY", "ORDER BY"]
-    pattern = r'\b(' + '|'.join(sql_keywords) + r')\b'
-    assert re.search(pattern, value, re.IGNORECASE), "Expected SQL query"
-    content = value.encode()
-    blob_name = f"{hash_bytes(content)}.sql"
-    return content, blob_name
 
 def read_text(value: str) -> tuple[bytes, str]:
     trimmed_value = value.strip()
@@ -145,10 +138,6 @@ def read_file(path: Path) -> tuple[bytes, str]:
     except Exception:
         pass
 
-    try:
-        return read_sql(path.read_text())
-    except Exception:
-        pass
 
     try:
         return read_text(path.read_text())
@@ -215,10 +204,6 @@ def get_blob_to_upload() -> tuple[bytes, str] | None:
     except Exception:
         pass
 
-    try:
-        return read_sql(value)
-    except Exception:
-        pass
 
     try:
         return read_text(value)
