@@ -81,8 +81,29 @@ def read_json(value: str) -> tuple[bytes, str]:
 
 def read_csv(value: str) -> tuple[bytes, str] | None:
     lines = value.strip().splitlines()
-    assert len(lines) > 0, "Expected non-empty CSV string"
-    assert ',' in lines[0] or ';' in lines[0] or '\t' in lines[0], "Expected comma, semicolon, or tab delimiter in header"
+    assert len(lines) >= 2, "Expected at least 2 lines for CSV structure"
+    
+    # Detect delimiter from first line
+    delimiter = None
+    for delim in [',', ';', '\t']:
+        if delim in lines[0]:
+            delimiter = delim
+            break
+    assert delimiter, "Expected comma, semicolon, or tab delimiter in header"
+    
+    # Validate structure: check that multiple lines have consistent field counts
+    field_counts = []
+    for line in lines[:min(5, len(lines))]:
+        if not line.strip():
+            continue
+        field_count = line.count(delimiter) + 1
+        field_counts.append(field_count)
+    
+    # Require at least 2 lines with data and consistent field counts
+    assert len(field_counts) >= 2, "Expected at least 2 non-empty lines"
+    assert len(set(field_counts)) == 1, "Expected consistent field counts across lines"
+    assert field_counts[0] >= 2, "Expected at least 2 fields per line"
+    
     content = value.encode()
     blob_name = f"{hash_bytes(content)}.csv"
     return content, blob_name
