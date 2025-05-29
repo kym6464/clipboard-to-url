@@ -220,7 +220,10 @@ def get_blob_to_upload() -> tuple[bytes, str] | None:
     except Exception:
         pass
 
-    return read_text(value)
+    try:
+        return read_text(value)
+    except Exception:
+        pass
 
 def read_config(env_file: Path):
     global PROJECT_ID, BUCKET_ID, OBJECT_PREFIX, JPEG_QUALITY
