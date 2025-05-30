@@ -37,6 +37,12 @@ JPEG_QUALITY: int
 register_heif_opener()
 
 
+def remove_surrounding_quotes(s):
+    if len(s) >= 2 and s[0] == s[-1] and s[0] in ('"', "'"):
+        return s[1:-1]
+    return s
+
+
 def extension_to_type(extension: str) -> str:
     assert isinstance(extension, str), f"Expected extension to be str, received: {extension}"
     content_type = mimetypes.types_map.get(extension)
@@ -118,8 +124,11 @@ def read_text(value: str) -> tuple[bytes, str]:
     blob_name = f"{hash_bytes(content)}.txt"
     return content, blob_name
 
-def read_file(path: Path) -> tuple[bytes, str]:
-    assert os.access(str(path), os.R_OK), f"Permission error"
+def read_file(path_str: str) -> tuple[bytes, str]:
+    path_str = remove_surrounding_quotes(path_str)
+    assert os.access(path_str, os.R_OK), f"Permission error"
+
+    path = Path(path_str)
     assert path.exists() and path.is_file()
 
     try:
@@ -190,8 +199,8 @@ def get_blob_to_upload() -> tuple[bytes, str] | None:
         return
 
     try:
-        return read_file(Path(value.strip()))
-    except Exception:
+        return read_file(value.strip())
+    except Exception as e:
         pass
 
     try:
