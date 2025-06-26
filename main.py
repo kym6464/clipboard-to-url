@@ -17,7 +17,6 @@ import mimetypes
 import os
 import json
 import argparse
-import re
 
 from PIL import Image, UnidentifiedImageError
 from PIL.Image import Image as PILImage
