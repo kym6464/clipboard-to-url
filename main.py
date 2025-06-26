@@ -219,13 +219,13 @@ def read_config(env_file: Path):
     assert env_file.exists(), f"Missing file {env_file}"
     config = dotenv_values(env_file)
 
-    PROJECT_ID = config.get("PROJECT_ID")
+    PROJECT_ID = config.get("PROJECT_ID") # type: ignore
     assert PROJECT_ID, f"Missing PROJECT_ID in {env_file}"
 
-    BUCKET_ID = config.get("BUCKET_ID")
+    BUCKET_ID = config.get("BUCKET_ID") # type: ignore
     assert BUCKET_ID, f"Missing BUCKET_ID in {env_file}"
 
-    JPEG_QUALITY = config.get("JPEG_QUALITY", "90")
+    JPEG_QUALITY = config.get("JPEG_QUALITY", "90") # type: ignore
     try:
         JPEG_QUALITY = int(JPEG_QUALITY)
     except ValueError:
