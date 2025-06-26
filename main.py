@@ -85,7 +85,7 @@ def read_json(value: str) -> tuple[bytes, str]:
 
     return content, blob_name
 
-def read_csv(value: str) -> tuple[bytes, str] | None:
+def read_csv(value: str) -> tuple[bytes, str]:
     lines = value.strip().splitlines()
     assert len(lines) >= 2, "Expected at least 2 lines for CSV structure"
     
@@ -142,11 +142,11 @@ def read_file(path_str: str) -> tuple[bytes, str]:
     except Exception:
         pass
 
-    try:
-        return read_csv(path.read_text())
-    except Exception:
-        pass
-
+    if path.suffix == '.csv':
+        try:
+            return read_csv(path.read_text())
+        except Exception:
+            pass
 
     try:
         return read_text(path.read_text())
@@ -207,12 +207,6 @@ def get_blob_to_upload() -> tuple[bytes, str] | None:
         return read_json(value)
     except Exception:
         pass
-
-    try:
-        return read_csv(value)
-    except Exception:
-        pass
-
 
     try:
         return read_text(value)
