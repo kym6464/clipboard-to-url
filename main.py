@@ -113,6 +113,11 @@ def read_csv(value: str) -> tuple[bytes, str]:
     blob_name = f"{hash_bytes(content)}.csv"
     return content, blob_name
 
+def read_html(value: str) -> tuple[bytes, str]:
+    content = value.encode()
+    blob_name = f"{hash_bytes(content)}.html"
+    return content, blob_name
+
 
 def read_text(value: str) -> tuple[bytes, str]:
     trimmed_value = value.strip()
@@ -144,6 +149,12 @@ def read_file(path_str: str) -> tuple[bytes, str]:
     if path.suffix == '.csv':
         try:
             return read_csv(path.read_text())
+        except Exception:
+            pass
+
+    if path.suffix == '.html':
+        try:
+            return read_html(path.read_text())
         except Exception:
             pass
 
