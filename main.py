@@ -42,6 +42,17 @@ def remove_surrounding_quotes(s):
     return s
 
 
+def unescape_shell_path(path: str) -> str:
+    """Convert shell-escaped path to actual file path.
+    
+    Handles common shell escapes like:
+    - \\  (escaped space) -> space
+    - \\' (escaped single quote) -> '
+    - \\" (escaped double quote) -> "
+    """
+    return path.replace(r'\ ', ' ').replace(r"\'", "'").replace(r'\"', '"')
+
+
 def extension_to_type(extension: str) -> str:
     assert isinstance(extension, str), f"Expected extension to be str, received: {extension}"
     content_type = mimetypes.types_map.get(extension)
@@ -130,6 +141,7 @@ def read_text(value: str) -> tuple[bytes, str]:
 
 def read_file(path_str: str) -> tuple[bytes, str]:
     path_str = remove_surrounding_quotes(path_str)
+    path_str = unescape_shell_path(path_str)
     assert os.access(path_str, os.R_OK), f"Permission error"
 
     path = Path(path_str)
