@@ -149,7 +149,8 @@ def read_file(path_str: str) -> tuple[bytes, str]:
 
     try:
         with Image.open(path) as image:
-            return prepare_image(image)
+            if image.format != 'GIF':
+                return prepare_image(image)
     except UnidentifiedImageError:
         pass
 
