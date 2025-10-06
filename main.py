@@ -57,6 +57,11 @@ def extension_to_type(extension: str) -> str:
     assert isinstance(extension, str), f"Expected extension to be str, received: {extension}"
     content_type = mimetypes.types_map.get(extension)
     assert content_type, f"Failed to get content_type for {extension=}"
+
+    # Add charset for text-based formats to ensure proper UTF-8 rendering
+    if extension in ('.txt', '.json', '.csv', '.html'):
+        content_type += '; charset=utf-8'
+
     return content_type
 
 
