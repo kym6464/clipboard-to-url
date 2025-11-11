@@ -9,6 +9,7 @@ A self-hosted program that replaces the contents of your clipboard with a sharea
 - Videos play right in the browser
 - JSON is prettified and compacted via [compact-json](https://github.com/masaccio/compact-json)
 - Supports all file types
+- Preserves original filenames when uploading files (for "Save As" in browser)
 - Integrates with Mac Finder
 - Less than 200 lines of Python
 

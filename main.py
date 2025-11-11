@@ -144,7 +144,7 @@ def read_text(value: str) -> tuple[bytes, str]:
     blob_name = f"{hash_bytes(content)}.txt"
     return content, blob_name
 
-def read_file(path_str: str) -> tuple[bytes, str]:
+def read_file(path_str: str) -> tuple[bytes, str, str]:
     path_str = remove_surrounding_quotes(path_str)
     path_str = unescape_shell_path(path_str)
     assert os.access(path_str, os.R_OK), f"Permission error"
@@ -152,42 +152,49 @@ def read_file(path_str: str) -> tuple[bytes, str]:
     path = Path(path_str)
     assert path.exists() and path.is_file()
 
+    original_filename = path.name
+
     try:
         with Image.open(path) as image:
             if image.format != 'GIF':
-                return prepare_image(image)
+                content, blob_name = prepare_image(image)
+                return content, blob_name, original_filename
     except UnidentifiedImageError:
         pass
 
     try:
-        return read_json(path.read_text())
+        content, blob_name = read_json(path.read_text())
+        return content, blob_name, original_filename
     except Exception:
         pass
 
     if path.suffix == '.csv':
         try:
-            return read_csv(path.read_text())
+            content, blob_name = read_csv(path.read_text())
+            return content, blob_name, original_filename
         except Exception:
             pass
 
     if path.suffix == '.html':
         try:
-            return read_html(path.read_text())
+            content, blob_name = read_html(path.read_text())
+            return content, blob_name, original_filename
         except Exception:
             pass
 
     try:
-        return read_text(path.read_text())
+        content, blob_name = read_text(path.read_text())
+        return content, blob_name, original_filename
     except Exception:
         pass
 
     content = path.read_bytes()
     content_hash = hash_bytes(content)
     blob_name = f"{content_hash}{path.suffix}"
-    return content, blob_name
+    return content, blob_name, original_filename
 
 
-def upload_blob(content, blob_name):
+def upload_blob(content, blob_name, original_filename=None):
     client = storage.Client(project=PROJECT_ID)
     bucket = client.bucket(BUCKET_ID)
 
@@ -207,6 +214,9 @@ def upload_blob(content, blob_name):
     except Exception:
         pass
 
+    if original_filename:
+        blob.content_disposition = f'inline; filename="{original_filename}"'
+
     blob.upload_from_string(content, **kwds)
     return {
         "public_url": blob.public_url,
@@ -214,11 +224,12 @@ def upload_blob(content, blob_name):
     }
 
 
-def get_blob_to_upload() -> tuple[bytes, str] | None:
+def get_blob_to_upload() -> tuple[bytes, str, str | None] | None:
     try:
         image = ImageGrab.grabclipboard()
         if isinstance(image, PILImage):
-            return prepare_image(image)
+            content, blob_name = prepare_image(image)
+            return content, blob_name, None
     except Exception:
         pass
 
@@ -228,16 +239,18 @@ def get_blob_to_upload() -> tuple[bytes, str] | None:
 
     try:
         return read_file(value.strip())
-    except Exception as e:
-        pass
-
-    try:
-        return read_json(value)
     except Exception:
         pass
 
     try:
-        return read_text(value)
+        content, blob_name = read_json(value)
+        return content, blob_name, None
+    except Exception:
+        pass
+
+    try:
+        content, blob_name = read_text(value)
+        return content, blob_name, None
     except Exception:
         pass
 
@@ -279,8 +292,8 @@ if __name__ == "__main__":
         print("Nothing to upload")
         sys.exit()
 
-    content, blob_name = to_upload
-    result = upload_blob(content, blob_name)
+    content, blob_name, original_filename = to_upload
+    result = upload_blob(content, blob_name, original_filename)
 
     if args.output == 'clipboard':
         pyperclip.copy(result["public_url"])
