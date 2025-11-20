@@ -3,6 +3,7 @@
 # dependencies = [
 #     "compact-json==1.5.2",
 #     "google-cloud-storage==2.10.0",
+#     "markdown-it-py[linkify]==4.0.0",
 #     "pillow==11.3.0",
 #     "pillow-heif==1.1.0",
 #     "pyperclip==1.8.2",
@@ -55,11 +56,12 @@ def unescape_shell_path(path: str) -> str:
 
 def extension_to_type(extension: str) -> str:
     assert isinstance(extension, str), f"Expected extension to be str, received: {extension}"
+
     content_type = mimetypes.types_map.get(extension)
     assert content_type, f"Failed to get content_type for {extension=}"
 
     # Add charset for text-based formats to ensure proper UTF-8 rendering
-    if extension in ('.txt', '.json', '.csv', '.html'):
+    if extension in ('.txt', '.json', '.csv', '.html', '.md'):
         content_type += '; charset=utf-8'
 
     return content_type
@@ -134,6 +136,43 @@ def read_html(value: str) -> tuple[bytes, str]:
     blob_name = f"{hash_bytes(content)}.html"
     return content, blob_name
 
+def read_markdown(value: str) -> tuple[bytes, str]:
+    from markdown_it import MarkdownIt
+
+    md = MarkdownIt("gfm-like")
+    rendered_html = md.render(value)
+
+    html_document = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }}
+        img {{ max-width: 100%; }}
+        table {{ border-collapse: collapse; width: 100%; }}
+        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+        th {{ background-color: #f2f2f2; }}
+        code {{ background-color: #f4f4f4; padding: 2px 6px; border-radius: 3px; }}
+        pre {{ background-color: #f4f4f4; padding: 1rem; border-radius: 5px; overflow-x: auto; }}
+        pre code {{ background-color: transparent; padding: 0; }}
+        blockquote {{ border-left: 4px solid #ddd; margin: 0; padding-left: 1rem; color: #666; }}
+    </style>
+</head>
+<body>
+{rendered_html}
+</body>
+</html>"""
+
+    content = html_document.encode()
+    blob_name = f"{hash_bytes(value.encode())}.html"
+    return content, blob_name
 
 def read_text(value: str) -> tuple[bytes, str]:
     trimmed_value = value.strip()
@@ -144,7 +183,7 @@ def read_text(value: str) -> tuple[bytes, str]:
     blob_name = f"{hash_bytes(content)}.txt"
     return content, blob_name
 
-def read_file(path_str: str) -> tuple[bytes, str, str]:
+def read_file(path_str: str, raw_markdown: bool = False) -> tuple[bytes, str, str]:
     path_str = remove_surrounding_quotes(path_str)
     path_str = unescape_shell_path(path_str)
     assert os.access(path_str, os.R_OK), f"Permission error"
@@ -178,6 +217,13 @@ def read_file(path_str: str) -> tuple[bytes, str, str]:
     if path.suffix == '.html':
         try:
             content, blob_name = read_html(path.read_text())
+            return content, blob_name, original_filename
+        except Exception:
+            pass
+
+    if path.suffix == '.md' and not raw_markdown:
+        try:
+            content, blob_name = read_markdown(path.read_text())
             return content, blob_name, original_filename
         except Exception:
             pass
@@ -224,7 +270,7 @@ def upload_blob(content, blob_name, original_filename=None):
     }
 
 
-def get_blob_to_upload() -> tuple[bytes, str, str | None] | None:
+def get_blob_to_upload(raw_markdown: bool = False) -> tuple[bytes, str, str | None] | None:
     try:
         image = ImageGrab.grabclipboard()
         if isinstance(image, PILImage):
@@ -238,7 +284,7 @@ def get_blob_to_upload() -> tuple[bytes, str, str | None] | None:
         return
 
     try:
-        return read_file(value.strip())
+        return read_file(value.strip(), raw_markdown=raw_markdown)
     except Exception:
         pass
 
@@ -278,6 +324,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Upload content from clipboard or file to Google Cloud Storage.')
     parser.add_argument('-o', '--output', choices=['clipboard', 'stdout'], default='clipboard',
                         help='Specify where to output the resulting URL (default: clipboard)')
+    parser.add_argument('--raw-markdown', action='store_true',
+                        help='Upload markdown files as raw .md instead of converting to HTML')
     args = parser.parse_args()
 
     env_file = Path(__file__).parent.joinpath(".env").resolve()
@@ -287,7 +335,7 @@ if __name__ == "__main__":
         print(f"Failed to read config: {e}")
         sys.exit(1)
 
-    to_upload = get_blob_to_upload()
+    to_upload = get_blob_to_upload(raw_markdown=args.raw_markdown)
     if to_upload is None:
         print("Nothing to upload")
         sys.exit()
