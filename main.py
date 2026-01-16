@@ -24,7 +24,7 @@ from PIL.Image import Image as PILImage
 from PIL import ImageGrab
 from pillow_heif import register_heif_opener
 from pathlib import Path
-from dotenv import dotenv_values
+from dotenv import load_dotenv
 from google.cloud import storage
 from compact_json import Formatter, EolStyle
 
@@ -303,22 +303,21 @@ def get_blob_to_upload(raw_markdown: bool = False) -> tuple[bytes, str, str | No
 def read_config(env_file: Path):
     global PROJECT_ID, BUCKET_ID, OBJECT_PREFIX, JPEG_QUALITY
 
-    assert env_file.exists(), f"Missing file {env_file}"
-    config = dotenv_values(env_file)
+    load_dotenv(env_file)  # loads into os.environ if file exists, won't override existing vars
 
-    PROJECT_ID = config.get("PROJECT_ID") # type: ignore
-    assert PROJECT_ID, f"Missing PROJECT_ID in {env_file}"
+    PROJECT_ID = os.environ.get("PROJECT_ID")  # type: ignore
+    assert PROJECT_ID, "Missing PROJECT_ID"
 
-    BUCKET_ID = config.get("BUCKET_ID") # type: ignore
-    assert BUCKET_ID, f"Missing BUCKET_ID in {env_file}"
+    BUCKET_ID = os.environ.get("BUCKET_ID")  # type: ignore
+    assert BUCKET_ID, "Missing BUCKET_ID"
 
-    JPEG_QUALITY = config.get("JPEG_QUALITY", "90") # type: ignore
+    JPEG_QUALITY = os.environ.get("JPEG_QUALITY", "90")  # type: ignore
     try:
         JPEG_QUALITY = int(JPEG_QUALITY)
     except ValueError:
         raise TypeError(f"Expected JPEG_QUALITY to be an integer, received {JPEG_QUALITY}")
 
-    OBJECT_PREFIX = config.get("OBJECT_PREFIX")
+    OBJECT_PREFIX = os.environ.get("OBJECT_PREFIX")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Upload content from clipboard or file to Google Cloud Storage.')
