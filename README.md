@@ -9,7 +9,7 @@ Features:
 - Generates permalinks (unless you set an [expiration time](https://cloud.google.com/storage/docs/lifecycle))
 - Converts images to JPG to reduce storage size
 - Videos play right in the browser
-- Markdown files are converted to styled HTML (GitHub-flavored with tables, strikethrough, and autolinks) so that they're easily viewable in a web browser
+- Markdown files are converted to (GitHub-flavored) HTML so that they're viewable in a web browser
 - Supports all file types
 - Preserves original filenames when uploading files (for "Save As" in browser)
 - JSON is prettified (via [compact-json](https://github.com/masaccio/compact-json))
