@@ -5,14 +5,14 @@ A self-hosted program that replaces the contents of your clipboard with a sharea
 Features:
 
 - Basically free
-- Uploads files to your very own [google cloud storage](https://cloud.google.com/storage) bucket
+- Uploads files to your own [Google Cloud Storage](https://cloud.google.com/storage) bucket
 - Generates permalinks (unless you set an [expiration time](https://cloud.google.com/storage/docs/lifecycle))
-- Converts PNG and HEIF to JPG to reduce storage size
+- Converts images to JPG to reduce storage size
 - Videos play right in the browser
-- JSON is prettified and compacted via [compact-json](https://github.com/masaccio/compact-json)
 - Markdown files are converted to styled HTML (GitHub-flavored with tables, strikethrough, and autolinks) so that they're easily viewable in a web browser
 - Supports all file types
 - Preserves original filenames when uploading files (for "Save As" in browser)
+- JSON is prettified (via [compact-json](https://github.com/masaccio/compact-json))
 - Integrates with Mac Finder
 
 ## Quick Start
