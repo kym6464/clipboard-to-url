@@ -1,6 +1,8 @@
 # clipboard-to-url
 
-A self-hosted program that replaces the contents of your clipboard with a shareable URL. Features:
+A self-hosted program that replaces the contents of your clipboard with a shareable URL. If clipboard contains a path to a file, the file is processed.
+
+Features:
 
 - Basically free
 - Uploads files to your very own [google cloud storage](https://cloud.google.com/storage) bucket
