@@ -11,6 +11,7 @@
 # ]
 # ///
 import sys
+import re
 import pyperclip
 import hashlib
 import io
@@ -240,7 +241,7 @@ def read_file(path_str: str, raw_markdown: bool = False) -> tuple[bytes, str, st
     return content, blob_name, original_filename
 
 
-def upload_blob(content, blob_name, original_filename=None):
+def upload_blob(content, blob_name, original_filename=None, content_type=None):
     client = storage.Client(project=PROJECT_ID)
     bucket = client.bucket(BUCKET_ID)
 
@@ -255,10 +256,13 @@ def upload_blob(content, blob_name, original_filename=None):
         }
 
     kwds = {}
-    try:
-        kwds["content_type"] = extension_to_type(Path(blob_name).suffix)
-    except Exception:
-        pass
+    if content_type:
+        kwds["content_type"] = content_type
+    else:
+        try:
+            kwds["content_type"] = extension_to_type(Path(blob_name).suffix)
+        except Exception:
+            pass
 
     if original_filename:
         blob.content_disposition = f'inline; filename="{original_filename}"'
@@ -325,6 +329,8 @@ if __name__ == "__main__":
                         help='Specify where to output the resulting URL (default: clipboard)')
     parser.add_argument('--raw-markdown', action='store_true',
                         help='Upload markdown files as raw .md instead of converting to HTML')
+    parser.add_argument('--content-type',
+                        help='Override the content type for the uploaded file (e.g. text/plain, image/png)')
     args = parser.parse_args()
 
     env_file = Path(__file__).parent.joinpath(".env").resolve()
@@ -340,7 +346,14 @@ if __name__ == "__main__":
         sys.exit()
 
     content, blob_name, original_filename = to_upload
-    result = upload_blob(content, blob_name, original_filename)
+    content_type = args.content_type
+    if content_type:
+        # Lightweight "type/subtype" format validation
+        assert re.match(r'^(text|image|audio|video|application|multipart|font|model)/[\w.+\-]+$', content_type), \
+            f"Invalid content type: {content_type!r}"
+        if content_type.startswith('text/') and 'charset' not in content_type:
+            content_type += '; charset=utf-8'
+    result = upload_blob(content, blob_name, original_filename, content_type=content_type)
 
     if args.output == 'clipboard':
         pyperclip.copy(result["public_url"])
