@@ -179,12 +179,24 @@ def read_text(value: str) -> tuple[bytes, str]:
     trimmed_value = value.strip()
     assert trimmed_value, "Expected non-empty string after trimming whitespace"
     assert len(trimmed_value) >= 10, "Expected string to be at least 10 characters long"
-    
+
     content = value.encode()
     blob_name = f"{hash_bytes(content)}.txt"
     return content, blob_name
 
-def read_file(path_str: str, raw_markdown: bool = False) -> tuple[bytes, str, str]:
+def process_text(value: str, content_type: str) -> tuple[bytes, str]:
+    base_type = content_type.split(';')[0].strip()
+    if base_type == 'text/markdown':
+        return read_markdown(value)
+    if base_type == 'text/csv':
+        return read_csv(value)
+    if base_type == 'text/html':
+        return read_html(value)
+    if base_type == 'application/json':
+        return read_json(value)
+    return read_text(value)
+
+def read_file(path_str: str, content_type: str = None, raw_markdown: bool = False) -> tuple[bytes, str, str]:
     path_str = remove_surrounding_quotes(path_str)
     path_str = unescape_shell_path(path_str)
     assert os.access(path_str, os.R_OK), f"Permission error"
@@ -193,13 +205,58 @@ def read_file(path_str: str, raw_markdown: bool = False) -> tuple[bytes, str, st
     assert path.exists() and path.is_file()
 
     original_filename = path.name
+    suffix = path.suffix.lower()
 
+    if content_type:
+        base_type = content_type.split(';')[0].strip()
+        if base_type.startswith('image/'):
+            with Image.open(path) as image:
+                content, blob_name = prepare_image(image)
+                return content, blob_name, original_filename
+        content, blob_name = process_text(path.read_text(), content_type)
+        return content, blob_name, original_filename
+
+    # Recognized image suffix: direct dispatch
+    if mimetypes.types_map.get(suffix, '').startswith('image/'):
+        try:
+            with Image.open(path) as image:
+                if image.format != 'GIF':
+                    content, blob_name = prepare_image(image)
+                    return content, blob_name, original_filename
+        except UnidentifiedImageError:
+            pass
+        # GIF or unidentified: upload as raw bytes
+        content = path.read_bytes()
+        blob_name = f"{hash_bytes(content)}{suffix}"
+        return content, blob_name, original_filename
+
+    if suffix == '.json':
+        content, blob_name = read_json(path.read_text())
+        return content, blob_name, original_filename
+
+    if suffix == '.csv':
+        content, blob_name = read_csv(path.read_text())
+        return content, blob_name, original_filename
+
+    if suffix == '.html':
+        content, blob_name = read_html(path.read_text())
+        return content, blob_name, original_filename
+
+    if suffix == '.md' and not raw_markdown:
+        content, blob_name = read_markdown(path.read_text())
+        return content, blob_name, original_filename
+
+    if suffix == '.txt':
+        content, blob_name = read_text(path.read_text())
+        return content, blob_name, original_filename
+
+    # Unrecognized suffix (or .md with --raw-markdown): content sniffing waterfall
     try:
         with Image.open(path) as image:
             if image.format != 'GIF':
                 content, blob_name = prepare_image(image)
                 return content, blob_name, original_filename
-    except UnidentifiedImageError:
+    except Exception:
         pass
 
     try:
@@ -208,27 +265,6 @@ def read_file(path_str: str, raw_markdown: bool = False) -> tuple[bytes, str, st
     except Exception:
         pass
 
-    if path.suffix == '.csv':
-        try:
-            content, blob_name = read_csv(path.read_text())
-            return content, blob_name, original_filename
-        except Exception:
-            pass
-
-    if path.suffix == '.html':
-        try:
-            content, blob_name = read_html(path.read_text())
-            return content, blob_name, original_filename
-        except Exception:
-            pass
-
-    if path.suffix == '.md' and not raw_markdown:
-        try:
-            content, blob_name = read_markdown(path.read_text())
-            return content, blob_name, original_filename
-        except Exception:
-            pass
-
     try:
         content, blob_name = read_text(path.read_text())
         return content, blob_name, original_filename
@@ -236,8 +272,7 @@ def read_file(path_str: str, raw_markdown: bool = False) -> tuple[bytes, str, st
         pass
 
     content = path.read_bytes()
-    content_hash = hash_bytes(content)
-    blob_name = f"{content_hash}{path.suffix}"
+    blob_name = f"{hash_bytes(content)}{suffix}"
     return content, blob_name, original_filename
 
 
@@ -274,7 +309,7 @@ def upload_blob(content, blob_name, original_filename=None, content_type=None):
     }
 
 
-def get_blob_to_upload(raw_markdown: bool = False) -> tuple[bytes, str, str | None] | None:
+def get_blob_to_upload(content_type: str = None, raw_markdown: bool = False) -> tuple[bytes, str, str | None] | None:
     try:
         image = ImageGrab.grabclipboard()
         if isinstance(image, PILImage):
@@ -288,9 +323,13 @@ def get_blob_to_upload(raw_markdown: bool = False) -> tuple[bytes, str, str | No
         return
 
     try:
-        return read_file(value.strip(), raw_markdown=raw_markdown)
+        return read_file(value.strip(), content_type=content_type, raw_markdown=raw_markdown)
     except Exception:
         pass
+
+    if content_type:
+        content, blob_name = process_text(value, content_type)
+        return content, blob_name, None
 
     try:
         content, blob_name = read_json(value)
@@ -340,12 +379,6 @@ if __name__ == "__main__":
         print(f"Failed to read config: {e}")
         sys.exit(1)
 
-    to_upload = get_blob_to_upload(raw_markdown=args.raw_markdown)
-    if to_upload is None:
-        print("Nothing to upload")
-        sys.exit()
-
-    content, blob_name, original_filename = to_upload
     content_type = args.content_type
     if content_type:
         # Lightweight "type/subtype" format validation
@@ -353,7 +386,16 @@ if __name__ == "__main__":
             f"Invalid content type: {content_type!r}"
         if content_type.startswith('text/') and 'charset' not in content_type:
             content_type += '; charset=utf-8'
-    result = upload_blob(content, blob_name, original_filename, content_type=content_type)
+
+    to_upload = get_blob_to_upload(content_type=content_type, raw_markdown=args.raw_markdown)
+    if to_upload is None:
+        print("Nothing to upload")
+        sys.exit()
+
+    content, blob_name, original_filename = to_upload
+    # text/markdown is transformed to HTML; derive upload content type from blob_name extension instead
+    upload_content_type = None if (content_type and content_type.startswith('text/markdown')) else content_type
+    result = upload_blob(content, blob_name, original_filename, content_type=upload_content_type)
 
     if args.output == 'clipboard':
         pyperclip.copy(result["public_url"])

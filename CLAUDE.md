@@ -23,13 +23,18 @@ uv run python3 -c "from main import unescape_shell_path; print(repr(unescape_she
 ## Architecture & Processing Flow
 
 ### Core Components
-- `get_blob_to_upload()`: Main entry point that tries different content types
-- `read_file()`: Handles file path processing (quotes removal → shell unescaping → file operations)
-- Content processors: `read_json()`, `read_csv()`, `read_html()`, `read_text()`, `prepare_image()`
+- `get_blob_to_upload(content_type, raw_markdown)`: Main entry point
+- `read_file(path_str, content_type, raw_markdown)`: Handles file path processing (quotes removal → shell unescaping → file operations)
+- `process_text(value, content_type)`: Routes text content to the appropriate processor based on content type
+- Content processors: `read_json()`, `read_csv()`, `read_html()`, `read_markdown()`, `read_text()`, `prepare_image()`
 - `upload_blob()`: GCS upload with deduplication
 
+### Content Type Resolution (three tiers, in priority order)
+1. **`--content-type` flag**: Routes directly to the matching processor; `text/markdown` renders to HTML (uploaded as `text/html`)
+2. **File suffix**: Recognized extensions (`.json`, `.csv`, `.html`, `.md`, image types, `.txt`) dispatch directly
+3. **Content sniffing waterfall**: Used for unrecognized suffixes and `.md` with `--raw-markdown` — tries image (PIL) → JSON → text → raw bytes
+
 ### Processing Patterns
-1. **File processing pipeline**: quotes removal → shell unescaping → path validation → content type detection
-2. **Content type detection**: Try image → JSON → CSV/HTML (by extension) → text → raw bytes
-3. **Error handling**: Use assertions with descriptive messages
-4. **Hashing**: MD5 for content-based deduplication
+- **File processing pipeline**: quotes removal → shell unescaping → path validation → content type resolution
+- **Error handling**: Use assertions with descriptive messages
+- **Hashing**: MD5 for content-based deduplication
