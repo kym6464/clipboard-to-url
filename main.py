@@ -369,6 +369,8 @@ def read_config(env_file: Path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Upload content from clipboard or file to Google Cloud Storage.')
+    parser.add_argument('path', nargs='?', default=None,
+                        help='Path to a file to upload. If omitted, reads from the clipboard.')
     parser.add_argument('-o', '--output', choices=['clipboard', 'stdout'], default='clipboard',
                         help='Specify where to output the resulting URL (default: clipboard)')
     parser.add_argument('--raw-markdown', action='store_true',
@@ -393,7 +395,14 @@ if __name__ == "__main__":
             content_type += '; charset=utf-8'
 
     sidecars: list[tuple[bytes, str, str]] = []
-    to_upload = get_blob_to_upload(content_type=content_type, raw_markdown=args.raw_markdown, sidecars=sidecars)
+    if args.path is not None:
+        try:
+            to_upload = read_file(args.path, content_type=content_type, raw_markdown=args.raw_markdown, sidecars=sidecars)
+        except Exception as e:
+            print(f"Failed to read file: {e}")
+            sys.exit(1)
+    else:
+        to_upload = get_blob_to_upload(content_type=content_type, raw_markdown=args.raw_markdown, sidecars=sidecars)
     if to_upload is None:
         print("Nothing to upload")
         sys.exit()
