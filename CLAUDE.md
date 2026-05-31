@@ -1,5 +1,5 @@
 ## Project Overview
-This is a Python script that uploads content from clipboard or files to Google Cloud Storage and returns public URLs. The script handles various content types including images, JSON, CSV, HTML, and text files.
+This is a Python script that uploads content from clipboard or files to Google Cloud Storage and returns a shareable URL. The script handles various content types including images, JSON, CSV, HTML, and text files.
 
 ## Environment & Execution
 - **Python execution**: Use `uv run --script main.py` (NOT regular python commands)
@@ -38,3 +38,6 @@ uv run python3 -c "from main import unescape_shell_path; print(repr(unescape_she
 - **File processing pipeline**: quotes removal → shell unescaping → path validation → content type resolution
 - **Error handling**: Use assertions with descriptive messages
 - **Hashing**: MD5 for content-based deduplication
+
+## Development Flow
+Work directly on `main`. Do not create feature branches or pull requests.
