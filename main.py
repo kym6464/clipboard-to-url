@@ -218,7 +218,12 @@ def read_file(path_str: str, content_type: str = None, raw_markdown: bool = Fals
             with Image.open(path) as image:
                 content, blob_name = prepare_image(image)
                 return content, blob_name, original_filename
-        content, blob_name = process_text(path.read_text(), content_type, sidecars)
+        if base_type.startswith('text/') or base_type == 'application/json':
+            content, blob_name = process_text(path.read_text(), content_type, sidecars)
+            return content, blob_name, original_filename
+        # Binary content type (e.g. application/zip): upload raw bytes
+        content = path.read_bytes()
+        blob_name = f"{hash_bytes(content)}{suffix}"
         return content, blob_name, original_filename
 
     # Recognized image suffix: direct dispatch
