@@ -1,6 +1,6 @@
 # clipboard-to-url
 
-A self-hosted program that replaces the contents of your clipboard with a shareable URL. If clipboard contains a path to a file, the file is processed.
+A self-hosted program that replaces the contents of your clipboard with a shareable URL. If clipboard contains a path to a file, the file is processed. It also accepts a file path argument or text piped on stdin, so it works from scripts and AI agents as well as from the clipboard.
 
 Features:
 
@@ -14,6 +14,7 @@ Features:
 - Preserves original filenames when uploading files (for "Save As" in browser)
 - JSON is prettified (via [compact-json](https://github.com/masaccio/compact-json))
 - Integrates with Mac Finder
+- Works with private buckets served behind a proxy via `URL_TEMPLATE`
 
 ## Quick Start
 
@@ -30,8 +31,35 @@ export PROJECT_ID=myproject
 export BUCKET_ID=mybucket
 export OBJECT_PREFIX=optional/prefix/  # optional
 export JPEG_QUALITY=90                 # optional
+export URL_TEMPLATE='https://cdn.example.com/{object}'  # optional, see below
 
 uv run https://raw.githubusercontent.com/kym6464/clipboard-to-url/main/main.py
+```
+
+## Usage
+
+```bash
+main.py                      # upload the clipboard (image, text, or a file path) and copy the URL
+main.py ./design.md          # upload a file
+echo 'SELECT 1' | main.py    # upload piped text (also: main.py -)
+main.py -o stdout ./x.png    # print {"public_url": ..., "gcs_uri": ...} instead of copying
+main.py --help               # full reference, including all environment variables
+```
+
+Content type is inferred from the file extension for files, and sniffed (JSON, then text) for clipboard and stdin content. Pass `--content-type` for piped markdown, CSV, or HTML, which sniffing cannot tell apart from plain text:
+
+```bash
+main.py --content-type text/markdown <<'END'
+# Notes
+END
+```
+
+### Private buckets
+
+If your bucket is not public and is served through a proxy (for example a Cloud Run service in front of GCS), set `URL_TEMPLATE` and the program returns that URL instead of the `storage.googleapis.com` one. `{bucket}` expands to `BUCKET_ID` and `{object}` to the blob name including `OBJECT_PREFIX`:
+
+```bash
+export URL_TEMPLATE='https://bucket-{bucket}-123456789.us-central1.run.app/{object}'
 ```
 
 ## One-Time Setup

@@ -434,7 +434,8 @@ HELP_EPILOG = """\
 input sources (first match wins):
   main.py ./file.ext    upload a file
   main.py -             read stdin; also used automatically when stdin is piped
-  main.py               read the clipboard (image, text, or a file path)
+  main.py               read the clipboard (image, text, or a file path); also the
+                        fallback when piped stdin is empty
 
 --content-type is inferred from the file extension for files, and sniffed (JSON,
 then text) for stdin and clipboard content. Pass it explicitly for piped
@@ -493,19 +494,22 @@ if __name__ == "__main__":
             content_type += '; charset=utf-8'
 
     sidecars: list[tuple[bytes, str, str]] = []
-    if args.path == '-' or (args.path is None and not sys.stdin.isatty()):
+    to_upload = None
+    use_stdin = args.path == '-' or (args.path is None and not sys.stdin.isatty())
+    if use_stdin:
         try:
             to_upload = read_stdin(content_type=content_type, sidecars=sidecars)
         except Exception as e:
             print(f"Failed to read stdin: {e}")
             sys.exit(1)
-    elif args.path is not None:
+    if to_upload is None and args.path is not None and args.path != '-':
         try:
             to_upload = read_file(args.path, content_type=content_type, raw_markdown=args.raw_markdown, sidecars=sidecars)
         except Exception as e:
             print(f"Failed to read file: {e}")
             sys.exit(1)
-    else:
+    # Piped-but-empty stdin (e.g. `pbcopy && main.py` in an Automator action) falls back to the clipboard
+    if to_upload is None and args.path is None:
         to_upload = get_blob_to_upload(content_type=content_type, raw_markdown=args.raw_markdown, sidecars=sidecars)
     if to_upload is None:
         print("Nothing to upload")
