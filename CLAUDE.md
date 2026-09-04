@@ -37,6 +37,8 @@ uv run python3 -c "from main import unescape_shell_path; print(repr(unescape_she
 - Content processors: `read_json()`, `read_csv()`, `read_html()`, `read_markdown()`, `read_text()`, `prepare_image()`
 - `upload_blob()`: GCS upload with deduplication
 - `build_public_url()`: Returns `blob.public_url`, or `URL_TEMPLATE` formatted with `{bucket}`/`{object}` when set (validated in `read_config`)
+- `env(name)`: Config lookup that prefers `C2URL_<name>` and falls back to `<name>`; all config goes through it
+- Errors and `Nothing to upload` go to stderr with exit 1 so `-o stdout` JSON is safe to pipe
 
 ### Content Type Resolution (three tiers, in priority order)
 1. **`--content-type` flag**: Routes directly to the matching processor; `text/markdown` renders to HTML (uploaded as `text/html`)

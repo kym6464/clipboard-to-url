@@ -403,32 +403,37 @@ def get_blob_to_upload(content_type: str = None, raw_markdown: bool = False, sid
     except Exception:
         pass
 
+def env(name: str, default: str | None = None) -> str | None:
+    """Read C2URL_<name>, falling back to the unprefixed <name> for backwards compatibility."""
+    return os.environ.get(f"C2URL_{name}") or os.environ.get(name) or default
+
+
 def read_config(env_file: Path):
     global PROJECT_ID, BUCKET_ID, OBJECT_PREFIX, JPEG_QUALITY, URL_TEMPLATE
 
     load_dotenv(env_file)  # loads into os.environ if file exists, won't override existing vars
 
-    PROJECT_ID = os.environ.get("PROJECT_ID")  # type: ignore
-    assert PROJECT_ID, "Missing PROJECT_ID"
+    PROJECT_ID = env("PROJECT_ID")  # type: ignore
+    assert PROJECT_ID, "Missing C2URL_PROJECT_ID"
 
-    BUCKET_ID = os.environ.get("BUCKET_ID")  # type: ignore
-    assert BUCKET_ID, "Missing BUCKET_ID"
+    BUCKET_ID = env("BUCKET_ID")  # type: ignore
+    assert BUCKET_ID, "Missing C2URL_BUCKET_ID"
 
-    JPEG_QUALITY = os.environ.get("JPEG_QUALITY", "90")  # type: ignore
+    JPEG_QUALITY = env("JPEG_QUALITY", "90")  # type: ignore
     try:
         JPEG_QUALITY = int(JPEG_QUALITY)
     except ValueError:
-        raise TypeError(f"Expected JPEG_QUALITY to be an integer, received {JPEG_QUALITY}")
+        raise TypeError(f"Expected C2URL_JPEG_QUALITY to be an integer, received {JPEG_QUALITY}")
 
-    OBJECT_PREFIX = os.environ.get("OBJECT_PREFIX")
+    OBJECT_PREFIX = env("OBJECT_PREFIX")
 
-    URL_TEMPLATE = os.environ.get("URL_TEMPLATE")
+    URL_TEMPLATE = env("URL_TEMPLATE")
     if URL_TEMPLATE:
-        assert "{object}" in URL_TEMPLATE, f"Expected URL_TEMPLATE to contain {{object}}, received {URL_TEMPLATE}"
+        assert "{object}" in URL_TEMPLATE, f"Expected C2URL_URL_TEMPLATE to contain {{object}}, received {URL_TEMPLATE}"
         try:
             URL_TEMPLATE.format_map({"bucket": BUCKET_ID, "object": ""})
         except KeyError as e:
-            raise ValueError(f"Unknown placeholder {e} in URL_TEMPLATE, expected only {{bucket}} and {{object}}")
+            raise ValueError(f"Unknown placeholder {e} in C2URL_URL_TEMPLATE, expected only {{bucket}} and {{object}}")
 
 HELP_EPILOG = """\
 input sources (first match wins):
@@ -441,15 +446,18 @@ input sources (first match wins):
 then text) for stdin and clipboard content. Pass it explicitly for piped
 markdown, CSV, or HTML, which sniffing cannot tell apart from plain text.
 
-environment (read from .env next to this script, or the process environment):
-  PROJECT_ID     GCP project that owns the bucket (required)
-  BUCKET_ID      target GCS bucket (required)
-  OBJECT_PREFIX  prefix prepended to every blob name, e.g. clipboard/
-  JPEG_QUALITY   quality of images re-encoded as JPEG, 0-95 (default: 90)
-  URL_TEMPLATE   URL to return instead of the GCS public URL, for buckets served
-                 behind a proxy. {bucket} is BUCKET_ID and {object} is the blob
-                 name including OBJECT_PREFIX, e.g.
-                 https://bucket-{bucket}-979839513730.us-central1.run.app/{object}
+environment (read from .env next to this script, or the process environment;
+the C2URL_ prefix is optional but avoids collisions with other tools):
+  C2URL_PROJECT_ID     GCP project that owns the bucket (required)
+  C2URL_BUCKET_ID      target GCS bucket (required)
+  C2URL_OBJECT_PREFIX  prefix prepended to every blob name, e.g. clipboard/
+  C2URL_JPEG_QUALITY   quality of images re-encoded as JPEG, 0-95 (default: 90)
+  C2URL_URL_TEMPLATE   URL to return instead of the GCS public URL, for buckets
+                       served behind a proxy. {bucket} is the bucket id and
+                       {object} is the blob name including the prefix, e.g.
+                       https://bucket-{bucket}-979839513730.us-central1.run.app/{object}
+
+errors are printed to stderr with a non-zero exit, including "Nothing to upload".
 
 examples:
   main.py ./design.md
@@ -482,7 +490,7 @@ if __name__ == "__main__":
     try:
         read_config(env_file)
     except Exception as e:
-        print(f"Failed to read config: {e}")
+        print(f"Failed to read config: {e}", file=sys.stderr)
         sys.exit(1)
 
     content_type = args.content_type
@@ -500,20 +508,20 @@ if __name__ == "__main__":
         try:
             to_upload = read_stdin(content_type=content_type, sidecars=sidecars)
         except Exception as e:
-            print(f"Failed to read stdin: {e}")
+            print(f"Failed to read stdin: {e}", file=sys.stderr)
             sys.exit(1)
     if to_upload is None and args.path is not None and args.path != '-':
         try:
             to_upload = read_file(args.path, content_type=content_type, raw_markdown=args.raw_markdown, sidecars=sidecars)
         except Exception as e:
-            print(f"Failed to read file: {e}")
+            print(f"Failed to read file: {e}", file=sys.stderr)
             sys.exit(1)
     # Piped-but-empty stdin (e.g. `pbcopy && main.py` in an Automator action) falls back to the clipboard
     if to_upload is None and args.path is None:
         to_upload = get_blob_to_upload(content_type=content_type, raw_markdown=args.raw_markdown, sidecars=sidecars)
     if to_upload is None:
-        print("Nothing to upload")
-        sys.exit()
+        print("Nothing to upload", file=sys.stderr)
+        sys.exit(1)
 
     content, blob_name, original_filename = to_upload
     # text/markdown is transformed to HTML; derive upload content type from blob_name extension instead

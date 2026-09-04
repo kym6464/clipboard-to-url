@@ -14,25 +14,29 @@ Features:
 - Preserves original filenames when uploading files (for "Save As" in browser)
 - JSON is prettified (via [compact-json](https://github.com/masaccio/compact-json))
 - Integrates with Mac Finder
-- Works with private buckets served behind a proxy via `URL_TEMPLATE`
+- Works with private buckets served behind a proxy via `C2URL_URL_TEMPLATE`
 
 ## Quick Start
 
 If you have [uv](https://docs.astral.sh/uv/) installed and GCP credentials configured, you can run this directly without cloning:
 
 ```bash
-PROJECT_ID=myproject BUCKET_ID=mybucket uv run https://raw.githubusercontent.com/kym6464/clipboard-to-url/main/main.py
+C2URL_PROJECT_ID=myproject C2URL_BUCKET_ID=mybucket uv run https://raw.githubusercontent.com/kym6464/clipboard-to-url/main/main.py
 ```
 
 Or export the variables in your shell profile for persistent use:
 
 ```bash
-export PROJECT_ID=myproject
-export BUCKET_ID=mybucket
-export OBJECT_PREFIX=optional/prefix/  # optional
-export JPEG_QUALITY=90                 # optional
-export URL_TEMPLATE='https://cdn.example.com/{object}'  # optional, see below
+export C2URL_PROJECT_ID=myproject
+export C2URL_BUCKET_ID=mybucket
+export C2URL_OBJECT_PREFIX=optional/prefix/  # optional
+export C2URL_JPEG_QUALITY=90                 # optional
+export C2URL_URL_TEMPLATE='https://cdn.example.com/{object}'  # optional, see below
+```
 
+The `C2URL_` prefix keeps these from colliding with other tools that read `PROJECT_ID` and friends. The unprefixed names still work as a fallback.
+
+```bash
 uv run https://raw.githubusercontent.com/kym6464/clipboard-to-url/main/main.py
 ```
 
@@ -46,6 +50,8 @@ main.py -o stdout ./x.png    # print {"public_url": ..., "gcs_uri": ...} instead
 main.py --help               # full reference, including all environment variables
 ```
 
+Errors (including `Nothing to upload`) go to stderr with a non-zero exit, so the JSON on stdout is safe to pipe into `jq`.
+
 Content type is inferred from the file extension for files, and sniffed (JSON, then text) for clipboard and stdin content. Pass `--content-type` for piped markdown, CSV, or HTML, which sniffing cannot tell apart from plain text:
 
 ```bash
@@ -56,10 +62,10 @@ END
 
 ### Private buckets
 
-If your bucket is not public and is served through a proxy (for example a Cloud Run service in front of GCS), set `URL_TEMPLATE` and the program returns that URL instead of the `storage.googleapis.com` one. `{bucket}` expands to `BUCKET_ID` and `{object}` to the blob name including `OBJECT_PREFIX`:
+If your bucket is not public and is served through a proxy (for example a Cloud Run service in front of GCS), set `C2URL_URL_TEMPLATE` and the program returns that URL instead of the `storage.googleapis.com` one. `{bucket}` expands to the bucket id and `{object}` to the blob name including the object prefix:
 
 ```bash
-export URL_TEMPLATE='https://bucket-{bucket}-123456789.us-central1.run.app/{object}'
+export C2URL_URL_TEMPLATE='https://bucket-{bucket}-123456789.us-central1.run.app/{object}'
 ```
 
 ## One-Time Setup
