@@ -34,6 +34,7 @@ PROJECT_ID: str
 BUCKET_ID: str
 OBJECT_PREFIX: str | None
 JPEG_QUALITY: int
+URL_TEMPLATE: str | None
 
 register_heif_opener()
 
@@ -180,16 +181,16 @@ def read_markdown(value: str, sidecars: list | None = None) -> tuple[bytes, str]
 
     return content, blob_name
 
-def read_text(value: str) -> tuple[bytes, str]:
+def read_text(value: str, min_length: int = 10) -> tuple[bytes, str]:
     trimmed_value = value.strip()
     assert trimmed_value, "Expected non-empty string after trimming whitespace"
-    assert len(trimmed_value) >= 10, "Expected string to be at least 10 characters long"
+    assert len(trimmed_value) >= min_length, f"Expected string to be at least {min_length} characters long"
 
     content = value.encode()
     blob_name = f"{hash_bytes(content)}.txt"
     return content, blob_name
 
-def process_text(value: str, content_type: str, sidecars: list | None = None) -> tuple[bytes, str]:
+def process_text(value: str, content_type: str, sidecars: list | None = None, min_length: int = 10) -> tuple[bytes, str]:
     base_type = content_type.split(';')[0].strip()
     if base_type == 'text/markdown':
         return read_markdown(value, sidecars)
@@ -199,7 +200,7 @@ def process_text(value: str, content_type: str, sidecars: list | None = None) ->
         return read_html(value)
     if base_type == 'application/json':
         return read_json(value)
-    return read_text(value)
+    return read_text(value, min_length=min_length)
 
 def read_file(path_str: str, content_type: str = None, raw_markdown: bool = False, sidecars: list | None = None) -> tuple[bytes, str, str]:
     path_str = remove_surrounding_quotes(path_str)
@@ -286,6 +287,55 @@ def read_file(path_str: str, content_type: str = None, raw_markdown: bool = Fals
     return content, blob_name, original_filename
 
 
+def read_stdin(content_type: str = None, sidecars: list | None = None) -> tuple[bytes, str, None] | None:
+    """Read content from stdin. Unlike the clipboard, text is never treated as a file path."""
+    data = sys.stdin.buffer.read()
+    if not data:
+        return
+
+    if content_type:
+        base_type = content_type.split(';')[0].strip()
+        if base_type.startswith('image/'):
+            with Image.open(io.BytesIO(data)) as image:
+                content, blob_name = prepare_image(image)
+                return content, blob_name, None
+        if base_type.startswith('text/') or base_type == 'application/json':
+            content, blob_name = process_text(data.decode(), content_type, sidecars, min_length=1)
+            return content, blob_name, None
+        # Binary content type (e.g. application/zip): upload raw bytes
+        suffix = mimetypes.guess_extension(base_type) or '.bin'
+        return data, f"{hash_bytes(data)}{suffix}", None
+
+    # No content type: content sniffing waterfall
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            if image.format != 'GIF':
+                content, blob_name = prepare_image(image)
+                return content, blob_name, None
+    except Exception:
+        pass
+
+    try:
+        content, blob_name = read_json(data.decode())
+        return content, blob_name, None
+    except Exception:
+        pass
+
+    try:
+        content, blob_name = read_text(data.decode(), min_length=1)
+        return content, blob_name, None
+    except Exception:
+        pass
+
+    return data, f"{hash_bytes(data)}.bin", None
+
+
+def build_public_url(blob, blob_name: str) -> str:
+    if not URL_TEMPLATE:
+        return blob.public_url
+    return URL_TEMPLATE.format_map({"bucket": BUCKET_ID, "object": blob_name})
+
+
 def upload_blob(content, blob_name, original_filename=None, content_type=None):
     client = storage.Client(project=PROJECT_ID)
     bucket = client.bucket(BUCKET_ID)
@@ -296,7 +346,7 @@ def upload_blob(content, blob_name, original_filename=None, content_type=None):
 
     if blob.exists():
         return {
-            "public_url": blob.public_url,
+            "public_url": build_public_url(blob, blob_name),
             "gcs_uri": f"gs://{BUCKET_ID}/{blob_name}"
         }
 
@@ -314,7 +364,7 @@ def upload_blob(content, blob_name, original_filename=None, content_type=None):
 
     blob.upload_from_string(content, **kwds)
     return {
-        "public_url": blob.public_url,
+        "public_url": build_public_url(blob, blob_name),
         "gcs_uri": f"gs://{BUCKET_ID}/{blob_name}"
     }
 
@@ -354,7 +404,7 @@ def get_blob_to_upload(content_type: str = None, raw_markdown: bool = False, sid
         pass
 
 def read_config(env_file: Path):
-    global PROJECT_ID, BUCKET_ID, OBJECT_PREFIX, JPEG_QUALITY
+    global PROJECT_ID, BUCKET_ID, OBJECT_PREFIX, JPEG_QUALITY, URL_TEMPLATE
 
     load_dotenv(env_file)  # loads into os.environ if file exists, won't override existing vars
 
@@ -372,10 +422,53 @@ def read_config(env_file: Path):
 
     OBJECT_PREFIX = os.environ.get("OBJECT_PREFIX")
 
+    URL_TEMPLATE = os.environ.get("URL_TEMPLATE")
+    if URL_TEMPLATE:
+        assert "{object}" in URL_TEMPLATE, f"Expected URL_TEMPLATE to contain {{object}}, received {URL_TEMPLATE}"
+        try:
+            URL_TEMPLATE.format_map({"bucket": BUCKET_ID, "object": ""})
+        except KeyError as e:
+            raise ValueError(f"Unknown placeholder {e} in URL_TEMPLATE, expected only {{bucket}} and {{object}}")
+
+HELP_EPILOG = """\
+input sources (first match wins):
+  main.py ./file.ext    upload a file
+  main.py -             read stdin; also used automatically when stdin is piped
+  main.py               read the clipboard (image, text, or a file path)
+
+--content-type is inferred from the file extension for files, and sniffed (JSON,
+then text) for stdin and clipboard content. Pass it explicitly for piped
+markdown, CSV, or HTML, which sniffing cannot tell apart from plain text.
+
+environment (read from .env next to this script, or the process environment):
+  PROJECT_ID     GCP project that owns the bucket (required)
+  BUCKET_ID      target GCS bucket (required)
+  OBJECT_PREFIX  prefix prepended to every blob name, e.g. clipboard/
+  JPEG_QUALITY   quality of images re-encoded as JPEG, 0-95 (default: 90)
+  URL_TEMPLATE   URL to return instead of the GCS public URL, for buckets served
+                 behind a proxy. {bucket} is BUCKET_ID and {object} is the blob
+                 name including OBJECT_PREFIX, e.g.
+                 https://bucket-{bucket}-979839513730.us-central1.run.app/{object}
+
+examples:
+  main.py ./design.md
+  main.py --content-type text/markdown <<'END'
+  # Notes
+  END
+  echo 'SELECT 1' | main.py -o stdout
+  main.py ./diagram.png
+
+-o stdout prints {"public_url": ..., "gcs_uri": ...}; -o clipboard copies
+public_url. Markdown is rendered to HTML at .../<hash>.html and its raw source
+is uploaded alongside it at .../<hash>.md
+"""
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Upload content from clipboard or file to Google Cloud Storage.')
+    parser = argparse.ArgumentParser(description='Upload content from a file, stdin, or the clipboard to Google Cloud Storage.',
+                                     epilog=HELP_EPILOG,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('path', nargs='?', default=None,
-                        help='Path to a file to upload. If omitted, reads from the clipboard.')
+                        help="Path to a file to upload, or '-' to read stdin. If omitted, reads stdin when piped, otherwise the clipboard.")
     parser.add_argument('-o', '--output', choices=['clipboard', 'stdout'], default='clipboard',
                         help='Specify where to output the resulting URL (default: clipboard)')
     parser.add_argument('--raw-markdown', action='store_true',
@@ -400,7 +493,13 @@ if __name__ == "__main__":
             content_type += '; charset=utf-8'
 
     sidecars: list[tuple[bytes, str, str]] = []
-    if args.path is not None:
+    if args.path == '-' or (args.path is None and not sys.stdin.isatty()):
+        try:
+            to_upload = read_stdin(content_type=content_type, sidecars=sidecars)
+        except Exception as e:
+            print(f"Failed to read stdin: {e}")
+            sys.exit(1)
+    elif args.path is not None:
         try:
             to_upload = read_file(args.path, content_type=content_type, raw_markdown=args.raw_markdown, sidecars=sidecars)
         except Exception as e:
